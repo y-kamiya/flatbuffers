@@ -19,6 +19,11 @@
 
 #include "flatbuffers/base.h"
 
+#ifdef FLATBUFFERS_ENCRYPTION
+  #include "xxtea.h"
+  static const char *xxtea_key = "xjhdgUCPiqyxdq8d";
+#endif
+
 namespace flatbuffers {
 // Wrapper for uoffset_t to allow safe template specialization.
 // Value is allowed to be 0 to indicate a null object (see e.g. AddOffset).
@@ -994,10 +999,32 @@ class FlatBufferBuilder
   /// @return Returns the offset in the buffer where the string starts.
   Offset<String> CreateString(const char *str, size_t len) {
     NotNested();
+#ifdef FLATBUFFERS_ENCRYPTION
+    size_t out_len;
+    auto buf = xxtea_encrypt(reinterpret_cast<const void*>(str), len + 1, xxtea_key, &out_len);
+    PreAlign<uoffset_t>(out_len + 1);
+    buf_.fill(1);
+    fprintf(stderr, "CreateString: '%s' %lu -> %lu, buf: %s\n", str, len, out_len, buf);
+
+    size_t out_l;
+    auto b = xxtea_decrypt(reinterpret_cast<const void *>(buf), out_len, xxtea_key, &out_l);
+    // auto s = reinterpret_cast<const String *>(b);
+    auto s = reinterpret_cast<const char *>(b);
+    fprintf(stderr, "CreateString decrypted: '%s', out_l: %lu\n", s, out_l);
+    // for (auto i = 0; i < s->size(); i++) {
+    //     fprintf(stderr, "c: %c\n", c[i]);
+    // }
+    free(b);
+
+    PushBytes(reinterpret_cast<const uint8_t *>(buf), out_len);
+    PushElement(static_cast<uoffset_t>(out_len));
+    free(buf);
+#else
     PreAlign<uoffset_t>(len + 1);  // Always 0-terminated.
     buf_.fill(1);
     PushBytes(reinterpret_cast<const uint8_t *>(str), len);
     PushElement(static_cast<uoffset_t>(len));
+#endif
     return Offset<String>(GetSize());
   }
 
@@ -1906,6 +1933,28 @@ class Table {
 
   uint8_t data_[1];
 };
+
+#ifdef FLATBUFFERS_ENCRYPTION
+template<> inline const String *Table::GetPointer<const String *>(voffset_t field) {
+  auto field_offset = GetOptionalFieldOffset(field);
+  auto p = data_ + field_offset;
+  auto v = field_offset
+        ? reinterpret_cast<const String *>(p + ReadScalar<uoffset_t>(p))
+        : nullptr;
+
+  size_t out_len;
+  printf("GetString v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
+  auto buf = xxtea_decrypt(reinterpret_cast<const void *>(v->Data()), v->size(), xxtea_key, &out_len);
+  auto str = reinterpret_cast<const String *>(buf);
+  free(buf);
+  return str;
+
+}
+template<> inline const String *Table::GetPointer<const String *>(voffset_t field) const {
+  return const_cast<Table *>(this)->GetPointer<const String *>(field);
+}
+#endif
+
 
 /// @brief This can compute the start of a FlatBuffer from a root pointer, i.e.
 /// it is the opposite transformation of GetRoot().
