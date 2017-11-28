@@ -19,6 +19,11 @@
 
 #include "flatbuffers/base.h"
 
+#ifdef FLATBUFFERS_ENCRYPTION
+  #include "xxtea.h"
+  static const char *xxtea_key = "xjhdgUCPiqyxdq8d";
+#endif
+
 namespace flatbuffers {
 // Wrapper for uoffset_t to allow safe template specialization.
 // Value is allowed to be 0 to indicate a null object (see e.g. AddOffset).
@@ -374,6 +379,18 @@ const Vector<Offset<T>> *VectorCast(const Vector<Offset<U>> *ptr) {
 template<typename T> static inline size_t VectorLength(const Vector<T> *v) {
   return v ? v->Length() : 0;
 }
+
+#ifdef FLATBUFFERS_ENCRYPTION
+class StringGet : public std::string {
+public:
+  using std::string::string;
+
+  std::string str() const { return std::string(c_str(), size()); }
+
+  const uint8_t *Data() const { return reinterpret_cast<const uint8_t *>(data()); }
+  uoffset_t Length() const { return static_cast<uoffset_t>(size()); }
+};
+#endif
 
 struct String : public Vector<char> {
   const char *c_str() const { return reinterpret_cast<const char *>(Data()); }
@@ -994,10 +1011,21 @@ class FlatBufferBuilder
   /// @return Returns the offset in the buffer where the string starts.
   Offset<String> CreateString(const char *str, size_t len) {
     NotNested();
+#ifdef FLATBUFFERS_ENCRYPTION
+    size_t out_len;
+    auto buf = xxtea_encrypt(reinterpret_cast<const void*>(str), len + 1, xxtea_key, &out_len);
+    PreAlign<uoffset_t>(out_len + 1);
+    buf_.fill(1);
+    // fprintf(stderr, "CreateString: '%s' %lu -> %lu, buf: %s\n", str, len, out_len, buf);
+    PushBytes(reinterpret_cast<const uint8_t *>(buf), out_len);
+    PushElement(static_cast<uoffset_t>(out_len));
+    free(buf);
+#else
     PreAlign<uoffset_t>(len + 1);  // Always 0-terminated.
     buf_.fill(1);
     PushBytes(reinterpret_cast<const uint8_t *>(str), len);
     PushElement(static_cast<uoffset_t>(len));
+#endif
     return Offset<String>(GetSize());
   }
 
@@ -1627,6 +1655,13 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
             Check(*end == '\0'));  // Terminating byte must be 0.
   }
 
+#ifdef FLATBUFFERS_ENCRYPTION
+  bool Verify(const std::shared_ptr<StringGet> str) const {
+    return !str ||
+           Check(*(str->end()) == '\0');
+  }
+#endif
+
   // Common code between vectors and strings.
   bool VerifyVector(const uint8_t *vec, size_t elem_size,
                     const uint8_t **end) const {
@@ -1906,6 +1941,29 @@ class Table {
 
   uint8_t data_[1];
 };
+
+#ifdef FLATBUFFERS_ENCRYPTION
+template<> inline const std::shared_ptr<StringGet> Table::GetPointer<const std::shared_ptr<StringGet>>(voffset_t field) {
+  auto field_offset = GetOptionalFieldOffset(field);
+  auto p = data_ + field_offset;
+  auto v = field_offset
+        ? reinterpret_cast<const String *>(p + ReadScalar<uoffset_t>(p))
+        : nullptr;
+
+  size_t out_len;
+  // printf("GetString v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
+  auto buf = xxtea_decrypt(reinterpret_cast<const void *>(v->Data()), v->size(), xxtea_key, &out_len);
+  auto str = std::make_shared<StringGet>(reinterpret_cast<const char *>(buf));
+  free(buf);
+  // printf("GetString2 v->size() = %lu decrypted = %s\n", str->size(), str->c_str());
+  return str;
+
+}
+template<> inline const std::shared_ptr<StringGet> Table::GetPointer<const std::shared_ptr<StringGet>>(voffset_t field) const {
+  return const_cast<Table *>(this)->GetPointer<const std::shared_ptr<StringGet>>(field);
+}
+#endif
+
 
 /// @brief This can compute the start of a FlatBuffer from a root pointer, i.e.
 /// it is the opposite transformation of GetRoot().

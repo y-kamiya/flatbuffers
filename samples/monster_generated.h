@@ -211,11 +211,11 @@ struct Monster FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool mutate_hp(int16_t _hp) {
     return SetField<int16_t>(VT_HP, _hp, 100);
   }
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const std::shared_ptr<flatbuffers::StringGet> name() const {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  const std::shared_ptr<flatbuffers::StringGet> mutable_name() {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_NAME);
   }
   const flatbuffers::Vector<uint8_t> *inventory() const {
     return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_INVENTORY);
@@ -385,11 +385,11 @@ struct Weapon FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_NAME = 4,
     VT_DAMAGE = 6
   };
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const std::shared_ptr<flatbuffers::StringGet> name() const {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  const std::shared_ptr<flatbuffers::StringGet> mutable_name() {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_NAME);
   }
   int16_t damage() const {
     return GetField<int16_t>(VT_DAMAGE, 0);

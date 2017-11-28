@@ -433,11 +433,11 @@ struct Stat FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_VAL = 6,
     VT_COUNT = 8
   };
-  const flatbuffers::String *id() const {
-    return GetPointer<const flatbuffers::String *>(VT_ID);
+  const std::shared_ptr<flatbuffers::StringGet> id() const {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_ID);
   }
-  flatbuffers::String *mutable_id() {
-    return GetPointer<flatbuffers::String *>(VT_ID);
+  const std::shared_ptr<flatbuffers::StringGet> mutable_id() {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_ID);
   }
   int64_t val() const {
     return GetField<int64_t>(VT_VAL, 0);
@@ -617,11 +617,11 @@ struct Monster FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool mutate_hp(int16_t _hp) {
     return SetField<int16_t>(VT_HP, _hp, 100);
   }
-  const flatbuffers::String *name() const {
-    return GetPointer<const flatbuffers::String *>(VT_NAME);
+  const std::shared_ptr<flatbuffers::StringGet> name() const {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_NAME);
   }
-  flatbuffers::String *mutable_name() {
-    return GetPointer<flatbuffers::String *>(VT_NAME);
+  const std::shared_ptr<flatbuffers::StringGet> mutable_name() {
+    return GetPointer<const std::shared_ptr<flatbuffers::StringGet> >(VT_NAME);
   }
   bool KeyCompareLessThan(const Monster *o) const {
     return *name() < *o->name();

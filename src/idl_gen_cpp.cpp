@@ -440,6 +440,10 @@ class CppGenerator : public BaseGenerator {
                          bool user_facing_type) {
     if (IsScalar(type.base_type)) {
       return GenTypeBasic(type, user_facing_type) + afterbasic;
+#ifdef FLATBUFFERS_ENCRYPTION
+    } else if (type.base_type == BASE_TYPE_STRING) {
+      return "const std::shared_ptr<flatbuffers::StringGet> ";
+#endif
     } else {
       return beforeptr + GenTypePointer(type) + afterptr;
     }
