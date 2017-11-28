@@ -316,6 +316,20 @@ public:
     return IndirectHelper<T>::Read(element, 0);
   }
 
+  void setData(const uint8_t *data, uoffset_t length) {
+      length_ = length - 1;
+      auto pData = Data();
+      memcpy(pData, data, length);
+      // flag
+      *(pData + length) = 255;
+  }
+
+  bool isDecrypted() const {
+      auto pData = Data();
+      printf("%d\n", *(pData + length_ + 1));
+      return *(pData + length_ + 1) == 255;
+  }
+
 protected:
   // This class is only used to access pre-existing data. Don't ever
   // try to construct these manually.
@@ -1005,17 +1019,6 @@ class FlatBufferBuilder
     PreAlign<uoffset_t>(out_len + 1);
     buf_.fill(1);
     fprintf(stderr, "CreateString: '%s' %lu -> %lu, buf: %s\n", str, len, out_len, buf);
-
-    size_t out_l;
-    auto b = xxtea_decrypt(reinterpret_cast<const void *>(buf), out_len, xxtea_key, &out_l);
-    // auto s = reinterpret_cast<const String *>(b);
-    auto s = reinterpret_cast<const char *>(b);
-    fprintf(stderr, "CreateString decrypted: '%s', out_l: %lu\n", s, out_l);
-    // for (auto i = 0; i < s->size(); i++) {
-    //     fprintf(stderr, "c: %c\n", c[i]);
-    // }
-    free(b);
-
     PushBytes(reinterpret_cast<const uint8_t *>(buf), out_len);
     PushElement(static_cast<uoffset_t>(out_len));
     free(buf);
@@ -1939,15 +1942,19 @@ template<> inline const String *Table::GetPointer<const String *>(voffset_t fiel
   auto field_offset = GetOptionalFieldOffset(field);
   auto p = data_ + field_offset;
   auto v = field_offset
-        ? reinterpret_cast<const String *>(p + ReadScalar<uoffset_t>(p))
+        ? reinterpret_cast<String *>(p + ReadScalar<uoffset_t>(p))
         : nullptr;
 
+  if (v->isDecrypted()) {
+      return v;
+  }
   size_t out_len;
-  printf("GetString v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
   auto buf = xxtea_decrypt(reinterpret_cast<const void *>(v->Data()), v->size(), xxtea_key, &out_len);
-  auto str = reinterpret_cast<const String *>(buf);
+  printf("GetString  v->Data() = %p v->size() = %u data = %s, decrypted: %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str(), buf);
+  v->setData(static_cast<const uint8_t *>(buf), out_len);
+  printf("GetString2 v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
   free(buf);
-  return str;
+  return static_cast<const String *>(v);
 
 }
 template<> inline const String *Table::GetPointer<const String *>(voffset_t field) const {

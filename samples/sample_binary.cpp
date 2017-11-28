@@ -68,6 +68,9 @@ int main(int /*argc*/, const char * /*argv*/[]) {
   // Get and test some scalar types from the FlatBuffer.
   assert(monster->hp() == 80);
   assert(monster->mana() == 150);  // default
+  auto str = monster->name()->str();
+  std::string mon = "MyMonster";
+  fprintf(stderr, "name: %s, size: %lu, size2: %lu\n", str.c_str(), str.size(), mon.size());
   assert(monster->name()->str() == "MyMonster");
 
   // Get and test a field of the FlatBuffer's `struct`.
