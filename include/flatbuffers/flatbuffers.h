@@ -1950,6 +1950,9 @@ template<> inline const std::shared_ptr<StringGet> Table::GetPointer<const std::
         ? reinterpret_cast<const String *>(p + ReadScalar<uoffset_t>(p))
         : nullptr;
 
+  if (v == nullptr) {
+      return nullptr;
+  }
   size_t out_len;
   // printf("GetString v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
   auto buf = xxtea_decrypt(reinterpret_cast<const void *>(v->Data()), v->size(), xxtea_key, &out_len);
