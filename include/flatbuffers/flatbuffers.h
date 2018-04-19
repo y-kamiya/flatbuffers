@@ -86,6 +86,8 @@ template<typename T> FLATBUFFERS_CONSTEXPR size_t AlignOf() {
   #endif
 }
 
+struct String;
+
 // When we read serialized data from memory, in the case of most scalars,
 // we want to just read T, but in the case of Offset, we want to actually
 // perform the indirection and return a pointer.
@@ -111,6 +113,21 @@ template<typename T> struct IndirectHelper<Offset<T>> {
     return reinterpret_cast<return_type>(p + ReadScalar<uoffset_t>(p));
   }
 };
+#ifdef FLATBUFFERS_ENCRYPTION
+class StringGet;
+const std::shared_ptr<StringGet> GetDecryptedString(const String *v);
+
+template<> struct IndirectHelper<Offset<const std::shared_ptr<StringGet>>> {
+  typedef const std::shared_ptr<StringGet> return_type;
+  typedef std::shared_ptr<StringGet> mutable_return_type;
+  static const size_t element_stride = sizeof(uoffset_t);
+  static return_type Read(const uint8_t *p, uoffset_t i) {
+    p += i * sizeof(uoffset_t);
+    auto v = reinterpret_cast<const String *>(p + ReadScalar<uoffset_t>(p));
+    return GetDecryptedString(v);
+  }
+};
+#endif
 template<typename T> struct IndirectHelper<const T *> {
   typedef const T *return_type;
   typedef T *mutable_return_type;
@@ -211,8 +228,6 @@ struct VectorIterator {
 private:
   const uint8_t *data_;
 };
-
-struct String;
 
 // This is used as a helper type for accessing vectors.
 // Vector::data() assumes the vector elements start after the length field.
@@ -1660,6 +1675,9 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
     return !str ||
            Check(*(str->end()) == '\0');
   }
+  bool Verify(const std::shared_ptr<StringGet> *str) const {
+    return !str;
+  }
 #endif
 
   // Common code between vectors and strings.
@@ -1687,6 +1705,17 @@ class Verifier FLATBUFFERS_FINAL_CLASS {
       }
       return true;
   }
+
+#ifdef FLATBUFFERS_ENCRYPTION
+  bool VerifyVectorOfStrings(const Vector<Offset<const std::shared_ptr<StringGet>>> *vec) const {
+      if (vec) {
+        for (uoffset_t i = 0; i < vec->size(); i++) {
+          if (!Verify(vec->Get(i))) return false;
+        }
+      }
+      return true;
+  }
+#endif
 
   // Special case for table contents, after the above has been called.
   template<typename T> bool VerifyVectorOfTables(const Vector<Offset<T>> *vec) {
@@ -1950,20 +1979,23 @@ template<> inline const std::shared_ptr<StringGet> Table::GetPointer<const std::
         ? reinterpret_cast<const String *>(p + ReadScalar<uoffset_t>(p))
         : nullptr;
 
-  if (v == nullptr) {
-      return nullptr;
-  }
-  size_t out_len;
-  // printf("GetString v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
-  auto buf = xxtea_decrypt(reinterpret_cast<const void *>(v->Data()), v->size(), xxtea_key, &out_len);
-  auto str = std::make_shared<StringGet>(reinterpret_cast<const char *>(buf));
-  free(buf);
-  // printf("GetString2 v->size() = %lu decrypted = %s\n", str->size(), str->c_str());
-  return str;
-
+  return GetDecryptedString(v);
 }
 template<> inline const std::shared_ptr<StringGet> Table::GetPointer<const std::shared_ptr<StringGet>>(voffset_t field) const {
   return const_cast<Table *>(this)->GetPointer<const std::shared_ptr<StringGet>>(field);
+}
+
+inline const std::shared_ptr<StringGet> GetDecryptedString(const String *v) {
+    if (v == nullptr) {
+        return nullptr;
+    }
+    size_t out_len;
+    // printf("GetString v->Data() = %p v->size() = %u data = %s\n", reinterpret_cast<const void *>(v->Data()), v->size(), v->c_str());
+    auto buf = xxtea_decrypt(reinterpret_cast<const void *>(v->Data()), v->size(), xxtea_key, &out_len);
+    auto str = std::make_shared<StringGet>(reinterpret_cast<const char *>(buf));
+    free(buf);
+    // printf("GetString2 v->size() = %lu decrypted = %s\n", str->size(), str->c_str());
+    return str;
 }
 #endif
 

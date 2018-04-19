@@ -669,11 +669,11 @@ struct Monster FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   flatbuffers::Vector<const Test *> *mutable_test4() {
     return GetPointer<flatbuffers::Vector<const Test *> *>(VT_TEST4);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *testarrayofstring() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_TESTARRAYOFSTRING);
+  const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *testarrayofstring() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *>(VT_TESTARRAYOFSTRING);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_testarrayofstring() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_TESTARRAYOFSTRING);
+  const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *mutable_testarrayofstring() {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *>(VT_TESTARRAYOFSTRING);
   }
   /// an example documentation comment: this will end up in the generated code
   /// multiline too
@@ -783,11 +783,11 @@ struct Monster FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool mutate_testf3(float _testf3) {
     return SetField<float>(VT_TESTF3, _testf3, 0.0f);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *testarrayofstring2() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_TESTARRAYOFSTRING2);
+  const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *testarrayofstring2() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *>(VT_TESTARRAYOFSTRING2);
   }
-  flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *mutable_testarrayofstring2() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_TESTARRAYOFSTRING2);
+  const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *mutable_testarrayofstring2() {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *>(VT_TESTARRAYOFSTRING2);
   }
   const flatbuffers::Vector<const Ability *> *testarrayofsortedstruct() const {
     return GetPointer<const flatbuffers::Vector<const Ability *> *>(VT_TESTARRAYOFSORTEDSTRUCT);

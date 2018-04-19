@@ -443,6 +443,8 @@ class CppGenerator : public BaseGenerator {
 #ifdef FLATBUFFERS_ENCRYPTION
     } else if (type.base_type == BASE_TYPE_STRING) {
       return "const std::shared_ptr<flatbuffers::StringGet> ";
+    } else if (type.base_type == BASE_TYPE_VECTOR && type.VectorType().base_type == BASE_TYPE_STRING) {
+      return "const flatbuffers::Vector<flatbuffers::Offset<const std::shared_ptr<flatbuffers::StringGet>>> *";
 #endif
     } else {
       return beforeptr + GenTypePointer(type) + afterptr;
