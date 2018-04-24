@@ -24,6 +24,10 @@
 #include "namespace_test/namespace_test2_generated.h"
 #include "union_vector/union_vector_generated.h"
 
+#ifdef FLATBUFFERS_ENCRYPTION
+#undef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
+#endif
+
 #ifndef FLATBUFFERS_CPP98_STL
   #include <random>
 #endif
@@ -214,11 +218,15 @@ void AccessFlatBufferTest(const uint8_t *flatbuf, size_t length,
 
   flatbuffers::Verifier verifier1(&test_buff[0], length);
   TEST_EQ(VerifyMonsterBuffer(verifier1), true);
+#ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
   TEST_EQ(verifier1.GetComputedSize(), length);
+#endif
 
   flatbuffers::Verifier verifier2(&test_buff[length], length);
   TEST_EQ(VerifyMonsterBuffer(verifier2), true);
+#ifdef FLATBUFFERS_TRACK_VERIFIER_BUFFER_SIZE
   TEST_EQ(verifier2.GetComputedSize(), length);
+#endif
 
   TEST_EQ(strcmp(MonsterIdentifier(), "MONS"), 0);
   TEST_EQ(MonsterBufferHasIdentifier(flatbuf), true);
@@ -261,9 +269,16 @@ void AccessFlatBufferTest(const uint8_t *flatbuf, size_t length,
   TEST_EQ_STR(vecofstrings->Get(0)->c_str(), "bob");
   TEST_EQ_STR(vecofstrings->Get(1)->c_str(), "fred");
   if (pooled) {
+#ifdef FLATBUFFERS_ENCRYPTION
+    // decrypted string is created as new string of shared_ptr, so addresses are not same
+    TEST_EQ_STR(vecofstrings->Get(0)->c_str(), vecofstrings->Get(2)->c_str());
+    TEST_EQ_STR(vecofstrings->Get(1)->c_str(), vecofstrings->Get(3)->c_str());
+#elif
     // These should have pointer equality because of string pooling.
     TEST_EQ(vecofstrings->Get(0)->c_str(), vecofstrings->Get(2)->c_str());
     TEST_EQ(vecofstrings->Get(1)->c_str(), vecofstrings->Get(3)->c_str());
+#endif
+
   }
 
   auto vecofstrings2 = monster->testarrayofstring2();
@@ -1272,7 +1287,11 @@ void UnicodeSurrogatesTest() {
       "{ F:\"\\uD83D\\uDCA9\"}"), true);
   auto root = flatbuffers::GetRoot<flatbuffers::Table>(
     parser.builder_.GetBufferPointer());
+#ifdef FLATBUFFERS_ENCRYPTION
+  auto string = root->GetPointer<const std::shared_ptr<flatbuffers::StringGet>>(
+#else
   auto string = root->GetPointer<flatbuffers::String *>(
+#endif
     flatbuffers::FieldIndexToOffset(0));
   TEST_EQ(strcmp(string->c_str(), "\xF0\x9F\x92\xA9"), 0);
 }

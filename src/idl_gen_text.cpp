@@ -153,6 +153,17 @@ template<> bool Print<const void *>(const void *val,
   return true;
 }
 
+template<> bool Print<std::shared_ptr<StringGet>>(std::shared_ptr<StringGet> val,
+                                    Type type, int indent,
+                                    Type *union_type,
+                                    const IDLOptions &opts,
+                                    std::string *_text) {
+  if (!EscapeString(val->c_str(), val->Length(), _text, opts.allow_non_utf8)) {
+    return false;
+  }
+  return true;
+}
+
 // Generate text for a scalar field.
 template<typename T> static bool GenField(const FieldDef &fd,
                                           const Table *table, bool fixed,
@@ -180,6 +191,9 @@ static bool GenFieldOffset(const FieldDef &fd, const Table *table, bool fixed,
     auto root = flexbuffers::GetRoot(vec->data(), vec->size());
     root.ToString(true, false, *_text);
     return true;
+  } else if (fd.value.type.base_type == BASE_TYPE_STRING) {
+    auto str = table->GetPointer<const std::shared_ptr<StringGet>>(fd.value.offset);
+    return Print(str, fd.value.type, indent, union_type, opts, _text);
   } else {
     val = IsStruct(fd.value.type)
       ? table->GetStruct<const void *>(fd.value.offset)
