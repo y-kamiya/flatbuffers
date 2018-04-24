@@ -1676,10 +1676,13 @@ int main(int /*argc*/, const char * /*argv*/[]) {
       test_data_path = FLATBUFFERS_STRING(FLATBUFFERS_TEST_PATH_PREFIX) +
                        test_data_path;
     #endif
-  ParseAndGenerateTextTest();
-  ReflectionTest(flatbuf.data(), flatbuf.size());
+
+    #ifndef FLATBUFFERS_ENCRYPTION
+      ParseAndGenerateTextTest();
+      ReflectionTest(flatbuf.data(), flatbuf.size());
+      UnionVectorTest();
+    #endif
   ParseProtoTest();
-  UnionVectorTest();
   #endif
 
   FuzzTest1();
